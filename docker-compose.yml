@@ -1,0 +1,51 @@
+version: '3'
+services:
+
+  nginx:
+    image: nginx:1.25.0-alpine
+    container_name: symfony_nginx
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+      - "443:443"
+    volumes:
+      - ./:/var/www
+      - ./_docker/nginx/conf.d:/etc/nginx/conf.d
+      - ./_docker/nginx/certs:/etc/nginx/certs
+    depends_on:
+        - app
+    networks:
+      - symfony-network
+
+  app:
+      build:
+          context: ./
+          dockerfile: ./_docker/app/Dockerfile
+      container_name: symfony
+      restart: unless-stopped
+      working_dir: /var/www/
+      volumes:
+          - ./:/var/www
+      depends_on:
+          - db
+      networks:
+          - symfony-network
+
+  db:
+    image: postgres:15.3
+    container_name: symfony_db
+    restart: always
+    environment:
+      POSTGRES_DB: "postgres_db"
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: "postgres"
+    ports:
+      - "5438:5432"
+    volumes:
+        - ./postgres-data:/var/lib/postgresql/data
+    networks:
+        - symfony-network
+
+networks:
+  symfony-network:
+    driver: bridge
